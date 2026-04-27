@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="吃药提醒">
+    <meta name="theme-color" content="#2EAE7D">
+    <title>吃药提醒</title>
+    <style>
+
+        :root {
+            --primary: #2EAE7D;
+            --primary-light: #3CC98F;
+            --primary-dark: #239B6B;
+            --secondary: #17A2B8;
+            --accent: #14919B;
+            --bg-main: #F0F6F4;
+            --bg-card: #FFFFFF;
+            --bg-card-alt: #E8F5F0;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --text-light: #FFFFFF;
+            --success: #27AE60;
+            --danger: #E74C3C;
+            --warning: #F39C12;
+            --muted: #BDC3C7;
+            --border: #E0EBE6;
+            --shadow: 0 4px 20px rgba(46, 174, 125, 0.1);
+            --shadow-hover: 0 8px 30px rgba(46, 174, 125, 0.18);
+            --radius: 18px;
+            --radius-sm: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+            overflow-x: hidden;
+        }
+
+        /* ===== 顶部渐变头部 ===== */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            padding: 50px 24px 28px;
+            color: var(--text-light);
+            border-radius: 0 0 28px 28px;
+            box-shadow: 0 8px 32px rgba(46, 174, 125, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .header-date {
+            font-size: 15px;
+            font-weight: 300;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .header-greeting {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: var(--radius-sm);
+            padding: 14px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: var(--transition);
+        }
+
+        .stat-card:active {
+            transform: scale(0.97);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 300;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .stat-value.highlight {
+            color: #FFE066;
+        }
+
+        /* ===== 主内容区 ===== */
+        .main-content {
+            padding: 20px 16px 30px;
+        }
+
+        /* ===== 时段卡片 ===== */
+        .period-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            border: 1px solid var(--border);
+        }
+
+        .period-card:active {
+            box-shadow: var(--shadow-hover);
+        }
+
+        .period-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(46, 174, 125, 0.18), 0 0 0 1px var(--primary);
+        }
+
+        .period-card.completed {
+            opacity: 0.7;
+        }
+
+        .period-card.upcoming {
+            opacity: 1;
+        }
+
+        .period-card.upcoming .period-subtitle::after {
+            content: ' · 时间未到';
+            color: var(--muted);
+        }
+
+        .period-card.missed {
+            border-color: var(--danger);
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.12), 0 0 0 1px var(--danger);
+        }
+
+        .missed-badge {
+            display: inline-block;
+            background: #FDECEA;
+            color: var(--danger);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .period-header {
+            display: flex;
+            align-items: center;
+            padding: 18px 18px 12px;
+            gap: 12px;
+        }
+
+        .period-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .period-icon.morning {
+            background: linear-gradient(135deg, #FFE082, #FFD54F);
+        }
+
+        .period-icon.afternoon {
+            background: linear-gradient(135deg, #81D4FA, #4FC3F7);
+        }
+
+        .period-icon.evening {
+            background: linear-gradient(135deg, #CE93D8, #BA68C8);
+        }
+
+        .period-icon .pulse-dot {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+        }
+
+        .period-info {
+            flex: 1;
+        }
+
+        .period-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .period-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .period-progress {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .pie-bg {
+            fill: #E0E0E0;
+        }
+
+        .pie-fill {
+            fill: #FFE066;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ===== 药物列表 ===== */
+        .med-list {
+            padding: 0 18px 8px;
+        }
+
+        .med-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 8px;
+            border-bottom: 1px solid #F5F9F7;
+            transition: var(--transition);
+            cursor: pointer;
+            border-radius: 10px;
+            margin-bottom: 2px;
+        }
+
+        .med-item:last-child {
+            border-bottom: none;
+        }
+
+        .med-item:active {
+            background: var(--bg-card-alt);
+        }
+
+        .med-item.checked {
+            opacity: 0.5;
+        }
+
+        .med-checkbox {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2.5px solid var(--muted);
+            margin-right: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .med-item.checked .med-checkbox {
+            background: var(--success);
+            border-color: var(--success);
+            animation: checkBounce 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes checkBounce {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.25); }
+            60% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .med-checkbox svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .med-item.checked .med-checkbox svg {
+            opacity: 1;
+        }
+
+        .med-name {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .med-item.checked .med-name {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .med-dosage {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            background: #E8F5F0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: var(--transition);
+        }
+
+        .med-item.checked .med-dosage {
+            background: #F0F0F0;
+            color: var(--muted);
+        }
+
+        /* ===== 全部完成按钮 ===== */
+        .period-footer {
+            padding: 8px 18px 16px;
+        }
+
+        .btn-complete-all {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 174, 125, 0.25);
+        }
+
+        .btn-complete-all:active {
+            transform: scale(0.97);
+            box-shadow: 0 2px 6px rgba(46, 174, 125, 0.2);
+        }
+
+        .btn-complete-all.done {
+            background: var(--bg-card-alt);
+            color: var(--success);
+            box-shadow: none;
+            cursor: default;
+        }
+
+        .btn-undo-all {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            background: transparent;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            display: none;
+        }
+
+        .btn-undo-all.show {
+            display: block;
+        }
+
+        .btn-undo-all:active {
+            background: var(--bg-card-alt);
+        }
+
+        /* ===== 历史记录 ===== */
+        .history-section {
+            margin-top: 8px;
+        }
+
+        .history-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            cursor: pointer;
+            color: var(--primary);
+            font-size: 15px;
+            font-weight: 500;
+            gap: 6px;
+            transition: var(--transition);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .history-toggle:active {
+            background: var(--bg-card-alt);
+        }
+
+        .history-toggle svg {
+            transition: transform 0.3s ease;
+        }
+
+        .history-toggle.open svg {
+            transform: rotate(180deg);
+        }
+
+        .history-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .history-panel.open {
+            max-height: 2000px;
+        }
+
+        .history-list {
+            padding-top: 14px;
+        }
+
+        .history-day {
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .history-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .history-periods {
+            display: flex;
+            gap: 8px;
+        }
+
+        .history-period {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .history-period.completed {
+            background: #E8F8EF;
+            color: var(--success);
+        }
+
+        .history-period.missed {
+            background: #FDECEA;
+            color: var(--danger);
+        }
+
+        .history-period.pending {
+            background: #F5F5F5;
+            color: var(--muted);
+        }
+
+        .history-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ===== 底部间距 ===== */
+        .bottom-spacer {
+            height: 20px;
+        }
+
+        /* ===== 完成庆祝动画 ===== */
+        .confetti-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .confetti-overlay.active {
+            display: block;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: confettiFall 3s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-20px) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg) scale(0.3);
+                opacity: 0;
+            }
+        }
+
+        /* ===== 提示信息 ===== */
+        .toast {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--text-primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 999;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== 全天完成状态 ===== */
+        .all-done-banner {
+            background: linear-gradient(135deg, #E8F8EF, #D4EFDF);
+            border: 1px solid #A9DFBF;
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 18px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .all-done-banner .emoji {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        .all-done-banner .text {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .all-done-banner .subtext {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .daily-summary {
+            background: #fff;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1.5px dashed var(--border);
+        }
+
+        .daily-summary-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .daily-summary-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .daily-summary-item {
+            font-size: 12px;
+            color: var(--text-primary);
+            background: #f5f5f5;
+            padding: 4px 10px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .daily-summary-item .dosage {
+            color: var(--text-secondary);
+            margin-left: 2px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 响应式适配 ===== */
+        @media (max-width: 380px) {
+            .header-greeting {
+                font-size: 22px;
+            }
+            .stat-value {
+                font-size: 18px;
+            }
+            .med-name {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 提示 Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 庆祝动画 -->
+    <div class="confetti-overlay" id="confetti"></div>
+
+    <!-- 顶部头部 -->
+    <header class="header">
+        <div class="header-date" id="headerDate"></div>
+        <div class="header-greeting" id="headerGreeting">吃药提醒</div>
+        <div class="header-stats">
+            <div class="stat-card">
+                <div class="stat-label">今日进度</div>
+                <div class="stat-value" id="statProgress">0/0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">下一餐</div>
+                <div class="stat-value" id="statNext" style="font-size:15px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">倒计时</div>
+                <div class="stat-value highlight" id="statCountdown">--:--</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-content" id="mainContent">
+        <!-- 由 JS 动态渲染 -->
+    </main>
+
+    <script>
+    // ============================================
+    // 用药计划配置（修改药单只需编辑这里）
+    // ============================================
+    const MEDICINE_SCHEDULE = [
+        {
+            id: 'morning',
+            label: '早上',
+            time: '08:30',
+            hour: 8,
+            minute: 30,
+            icon: '🌅',
+            iconClass: 'morning',
+            medicines: [
+                { name: '滑膜炎胶囊', dosage: 3, unit: '粒' },
+                { name: '安康信', dosage: 1, unit: '粒' },
+                { name: '迈之灵', dosage: 2, unit: '粒' },
+                { name: '鱼油', dosage: 2, unit: '粒' },
+                { name: '氨糖', dosage: 2, unit: '粒' },
+                { name: '灵芝粉', dosage: 1, unit: '勺' },
+                { name: '蛋白粉', dosage: 1, unit: '勺' },
+            ]
+        },
+        {
+            id: 'afternoon',
+            label: '下午',
+            time: '14:30',
+            hour: 14,
+            minute: 30,
+            icon: '☀️',
+            iconClass: 'afternoon',
+            medicines: [
+                { name: '滑膜炎胶囊', dosage: 3, unit: '粒' },
+                { name: '蛋白粉', dosage: 1, unit: '勺' },
+                { name: '维生素C', dosage: 1, unit: '粒' },
+            ]
+        },
+        {
+            id: 'evening',
+            label: '晚上',
+            time: '21:00',
+            hour: 21,
+            minute: 0,
+            icon: '🌙',
+            iconClass: 'evening',
+            medicines: [
+                { name: '滑膜炎胶囊', dosage: 3, unit: '粒' },
+                { name: '迈之灵', dosage: 2, unit: '粒' },
+                { name: '鱼油', dosage: 2, unit: '粒' },
+                { name: '益生菌', dosage: 1, unit: '粒' },
+            ]
+        }
+    ];
+
+    const STORAGE_PREFIX = 'med_reminder_';
+    const HISTORY_DAYS = 30;
+
+    // ============================================
+    // 工具函数
+    // ============================================
+    function getTodayKey() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    function getWeekday(date) {
+        const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        return days[date.getDay()];
+    }
+
+    function formatDate(date) {
+        return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    function getStorageKey(key) {
+        return `${STORAGE_PREFIX}${key}`;
+    }
+
+    // localStorage 安全包装（Safari file:// 协议下可能被禁用）
+    var storageAvailable = true;
+    try {
+        var _test = localStorage;
+    } catch(e) {
+        storageAvailable = false;
+    }
+    function safeGetItem(key) {
+        if (!storageAvailable) return null;
+        try { return localStorage.getItem(key); } catch(e) { return null; }
+    }
+    function safeSetItem(key, value) {
+        if (!storageAvailable) return;
+        try { localStorage.setItem(key, value); } catch(e) { storageAvailable = false; }
+    }
+
+    function getTodayData() {
+        const key = getStorageKey(getTodayKey());
+        const raw = safeGetItem(key);
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch(e) { return null; }
+    }
+
+    function saveTodayData(data) {
+        const key = getStorageKey(getTodayKey());
+        safeSetItem(key, JSON.stringify(data));
+    }
+
+    function initTodayData() {
+        const todayKey = getTodayKey();
+        const key = getStorageKey(todayKey);
+        const raw = safeGetItem(key);
+
+        if (raw) {
+            try { return JSON.parse(raw); } catch(e) {}
+        }
+
+        // 初始化空数据
+        const data = {};
+        MEDICINE_SCHEDULE.forEach(period => {
+            data[period.id] = {};
+            period.medicines.forEach(med => {
+                data[period.id][med.name] = false;
+            });
+        });
+        safeSetItem(key, JSON.stringify(data));
+        return data;
+    }
+
+    function cleanOldHistory() {
+        if (!storageAvailable) return;
+        try {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - HISTORY_DAYS);
+            const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith(STORAGE_PREFIX)) {
+                    const dateStr = k.replace(STORAGE_PREFIX, '');
+                    if (dateStr < cutoffKey) {
+                        keysToRemove.push(k);
+                    }
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        } catch(e) {}
+    }
+
+    // ============================================
+    // 显示 Toast 提示
+    // ============================================
+    let toastTimer = null;
+    function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+    }
+
+    // ============================================
+    // 庆祝动画
+    // ============================================
+    function showConfetti() {
+        const overlay = document.getElementById('confetti');
+        overlay.innerHTML = '';
+        overlay.classList.add('active');
+        const colors = ['#2EAE7D', '#17A2B8', '#FFE066', '#FF6B6B', '#A78BFA', '#F472B6'];
+
+        for (let i = 0; i < 40; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random() * 100 + '%';
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.animationDelay = Math.random() * 0.5 + 's';
+            piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+            piece.style.width = (6 + Math.random() * 8) + 'px';
+            piece.style.height = (6 + Math.random() * 8) + 'px';
+            piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            overlay.appendChild(piece);
+        }
+
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            overlay.innerHTML = '';
+        }, 3500);
+    }
+
+    // ============================================
+    // 渲染头部信息
+    // ============================================
+    function renderHeader() {
+        const now = new Date();
+        document.getElementById('headerDate').textContent = `${formatDate(now)} ${getWeekday(now)} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const hour = now.getHours();
+        let greeting = '吃药提醒 💊';
+        if (hour < 6) greeting = '夜深了，早点休息 💤';
+        else if (hour < 9) greeting = '早上好，记得吃药 🌅';
+        else if (hour < 12) greeting = '上午好，保持好状态 ☀️';
+        else if (hour < 14) greeting = '中午好，别忘吃药 🌞';
+        else if (hour < 18) greeting = '下午好，继续加油 💪';
+        else if (hour < 22) greeting = '晚上好，记得吃药 🌙';
+        else greeting = '夜深了，早点休息 💤';
+        document.getElementById('headerGreeting').textContent = greeting;
+    }
+
+    // ============================================
+    // 渲染统计信息
+    // ============================================
+    function renderStats() {
+        const data = getTodayData();
+        if (!data) return;
+
+        let total = 0, completed = 0;
+        MEDICINE_SCHEDULE.forEach(period => {
+            period.medicines.forEach(med => {
+                total++;
+                if (data[period.id] && data[period.id][med.name]) completed++;
+            });
+        });
+
+        document.getElementById('statProgress').textContent = `${completed}/${total}`;
+
+        // 计算下一餐和倒计时
+        // 逻辑：跳过已过时间且未完成的时段（用卡片红色标签提醒），倒计时指向下一个未来时段
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        let nextPeriod = null;
+
+        // 先找未来且未完成的时段
+        for (const period of MEDICINE_SCHEDULE) {
+            const periodMinutes = period.hour * 60 + period.minute;
+            const allDone = data[period.id] && Object.values(data[period.id]).every(v => v);
+            if (!allDone && currentMinutes < periodMinutes) {
+                nextPeriod = period;
+                break;
+            }
+        }
+
+        // 如果没有未来时段了（今天所有时段都已过去），检查是否有遗漏的
+        if (!nextPeriod) {
+            for (const period of MEDICINE_SCHEDULE) {
+                const allDone = data[period.id] && Object.values(data[period.id]).every(v => v);
+                if (!allDone) {
+                    nextPeriod = period;
+                    break;
+                }
+            }
+        }
+
+        if (nextPeriod) {
+            document.getElementById('statNext').textContent = nextPeriod.label;
+            const periodMinutes = nextPeriod.hour * 60 + nextPeriod.minute;
+            let diff = periodMinutes - currentMinutes;
+            // 如果时段时间已过，显示"已过"
+            if (diff < 0) {
+                diff = Math.abs(diff);
+                const h = Math.floor(diff / 60);
+                const m = diff % 60;
+                if (h > 0) {
+                    document.getElementById('statCountdown').textContent = `已过${h}h${m}m`;
+                } else {
+                    document.getElementById('statCountdown').textContent = `已过${m}min`;
+                }
+            } else {
+                const h = Math.floor(diff / 60);
+                const m = diff % 60;
+                if (h > 0) {
+                    document.getElementById('statCountdown').textContent = `${h}h${m}m`;
+                } else {
+                    document.getElementById('statCountdown').textContent = `${m}min`;
+                }
+            }
+        } else {
+            document.getElementById('statNext').textContent = '全部完成';
+            document.getElementById('statCountdown').textContent = '🎉';
+        }
+    }
+
+    // ============================================
+    // 渲染时段卡片
+    // ============================================
+    function renderCards() {
+        const data = getTodayData();
+        if (!data) return;
+
+        const container = document.getElementById('mainContent');
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        let allPeriodsDone = true;
+
+        let html = '';
+
+        MEDICINE_SCHEDULE.forEach(period => {
+            const periodMinutes = period.hour * 60 + period.minute;
+            const isAllDone = Object.values(data[period.id]).every(v => v);
+            const completedCount = Object.values(data[period.id]).filter(v => v).length;
+            const totalCount = period.medicines.length;
+            const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+            // 计算饼状扇形路径（从12点方向顺时针）
+            const r = 14;
+            const cx = 18, cy = 18;
+            const isFull = progressPercent >= 99.9;
+            let piePath;
+            if (isFull) {
+                piePath = 'full'; // 特殊标记：100%时用实心圆
+            } else if (progressPercent > 0) {
+                const startAngle = -Math.PI / 2;
+                const endAngle = startAngle + (progressPercent / 100) * 2 * Math.PI;
+                const x1 = cx + r * Math.cos(endAngle);
+                const y1 = cy + r * Math.sin(endAngle);
+                const sx = cx + r * Math.cos(startAngle);
+                const sy = cy + r * Math.sin(startAngle);
+                const largeArc = progressPercent > 50 ? 1 : 0;
+                piePath = `M ${cx} ${cy} L ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(4)} ${y1.toFixed(4)} Z`;
+            } else {
+                piePath = '';
+            }
+
+            if (!isAllDone) allPeriodsDone = false;
+
+            // 判断时段状态
+            var cardClass = '';
+            var missedHtml = '';
+            if (isAllDone) {
+                cardClass = 'completed';
+            } else if (currentMinutes >= periodMinutes) {
+                // 已过时间但未完成 → 漏服
+                cardClass = 'missed';
+                missedHtml = '<span class="missed-badge">未服用</span>';
+            } else if (currentMinutes >= periodMinutes - 30) {
+                // 即将到来（前30分钟内）→ 当前活跃
+                cardClass = 'active';
+            } else {
+                // 未来时段
+                cardClass = 'upcoming';
+            }
+
+            html += `
+            <section class="period-card ${cardClass}">
+                <div class="period-header">
+                    <div class="period-icon ${period.iconClass}">
+                        <span>${period.icon}</span>
+                        ${cardClass === 'active' ? '<div class="pulse-dot"></div>' : ''}
+                    </div>
+                    <div class="period-info">
+                        <div class="period-title">${period.label} ${period.time}${missedHtml}</div>
+                        <div class="period-subtitle">${completedCount}/${totalCount} 已完成</div>
+                    </div>
+                    <div class="period-progress">
+                        <svg width="36" height="36" viewBox="0 0 36 36">
+                            <circle class="pie-bg" cx="18" cy="18" r="14" />
+                            ${piePath === 'full' ? '<circle class="pie-fill" cx="18" cy="18" r="14" />' : (piePath ? '<path class="pie-fill" d="' + piePath + '" />' : '')}
+                        </svg>
+                    </div>
+                </div>
+                <div class="med-list">
+                    ${period.medicines.map((med, idx) => {
+                        const checked = data[period.id][med.name];
+                        return `
+                        <div class="med-item ${checked ? 'checked' : ''}" onclick="toggleMed('${period.id}', '${med.name}', ${idx})">
+                            <div class="med-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span class="med-name">${med.name}</span>
+                            <span class="med-dosage">${med.dosage}${med.unit}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+                <div class="period-footer">
+                    <button class="btn-complete-all ${isAllDone ? 'done' : ''}" onclick="completeAll('${period.id}')" ${isAllDone ? 'disabled' : ''}>
+                        ${isAllDone ? '✓ 已全部完成' : '✓ 全部完成'}
+                    </button>
+                    <button class="btn-undo-all ${isAllDone ? 'show' : ''}" onclick="undoAll('${period.id}')">
+                        撤销全部
+                    </button>
+                </div>
+            </section>`;
+        });
+
+        // 全天完成横幅
+        if (allPeriodsDone) {
+            html = `
+            <div class="all-done-banner">
+                <div class="emoji">🎊</div>
+                <div class="text">今日药单已全部完成！</div>
+                <div class="subtext">坚持就是胜利，继续保持 💪</div>
+            </div>` + html;
+        }
+
+        // 每日备药清单
+        const dailyTotals = {};
+        MEDICINE_SCHEDULE.forEach(period => {
+            period.medicines.forEach(med => {
+                const key = med.name + '|' + med.unit;
+                if (!dailyTotals[key]) {
+                    dailyTotals[key] = { name: med.name, dosage: 0, unit: med.unit };
+                }
+                dailyTotals[key].dosage += med.dosage;
+            });
+        });
+        const summaryItems = Object.values(dailyTotals);
+        html += `
+        <div class="daily-summary">
+            <div class="daily-summary-title">📋 每日备药清单</div>
+            <div class="daily-summary-list">
+                ${summaryItems.map(item => `<div class="daily-summary-item">${item.name} <span class="dosage">${item.dosage}${item.unit}</span></div>`).join('')}
+            </div>
+        </div>`;
+
+        // 历史记录
+        html += `
+        <div class="history-section">
+            <button class="history-toggle" id="historyToggle" onclick="toggleHistory()">
+                <span>查看历史记录</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="history-panel" id="historyPanel">
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>`;
+
+        html += '<div class="bottom-spacer"></div>';
+
+        container.innerHTML = html;
+
+        // 调试：显示渲染了几张卡片
+        var cardCount = container.querySelectorAll('.period-card').length;
+        console.log('renderCards: 渲染了 ' + cardCount + ' 张卡片, MEDICINE_SCHEDULE长度: ' + MEDICINE_SCHEDULE.length);
+    }
+
+    // ============================================
+    // 渲染历史记录
+    // ============================================
+    function renderHistory() {
+        const listEl = document.getElementById('historyList');
+        if (!listEl) return;
+
+        const now = new Date();
+        let html = '';
+
+        for (let i = 1; i <= 7; i++) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const raw = safeGetItem(getStorageKey(key));
+            const data = raw ? JSON.parse(raw) : null;
+
+            const dayLabel = i === 1 ? '昨天' : i === 2 ? '前天' : `${date.getMonth() + 1}/${date.getDate()} ${getWeekday(date)}`;
+
+            html += `<div class="history-day">
+                <div class="history-date">${dayLabel}</div>
+                <div class="history-periods">`;
+
+            MEDICINE_SCHEDULE.forEach(period => {
+                let status = 'pending';
+                let icon = '<svg class="history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+
+                if (data && data[period.id]) {
+                    const allDone = Object.values(data[period.id]).every(v => v);
+                    const anyDone = Object.values(data[period.id]).some(v => v);
+                    if (allDone) {
+                        status = 'completed';
+                        icon = '<svg class="history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    } else if (anyDone) {
+                        status = 'missed';
+                        icon = '<svg class="history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                    }
+                }
+
+                html += `<div class="history-period ${status}">
+                    ${icon}
+                    <span>${period.label}</span>
+                </div>`;
+            });
+
+            html += '</div></div>';
+        }
+
+        listEl.innerHTML = html;
+    }
+
+    // ============================================
+    // 交互事件
+    // ============================================
+    function toggleMed(periodId, medName, medIdx) {
+        const data = getTodayData();
+        data[periodId][medName] = !data[periodId][medName];
+        saveTodayData(data);
+
+        if (data[periodId][medName]) {
+            const period = MEDICINE_SCHEDULE.find(p => p.id === periodId);
+            showToast(`${period.medicines[medIdx].name} ✓`);
+        }
+
+        // 检查是否全部完成
+        const period = MEDICINE_SCHEDULE.find(p => p.id === periodId);
+        const allDone = Object.values(data[periodId]).every(v => v);
+        if (allDone) {
+            setTimeout(() => {
+                showToast(`${period.label}时段已全部完成！`);
+            }, 300);
+            // 检查是否全天完成
+            let allPeriodsDone = true;
+            MEDICINE_SCHEDULE.forEach(p => {
+                if (!Object.values(data[p.id]).every(v => v)) allPeriodsDone = false;
+            });
+            if (allPeriodsDone) {
+                setTimeout(() => showConfetti(), 500);
+            }
+        }
+
+        renderCards();
+        renderHistory();
+        renderStats();
+    }
+
+    function completeAll(periodId) {
+        const data = getTodayData();
+        MEDICINE_SCHEDULE.find(p => p.id === periodId).medicines.forEach(med => {
+            data[periodId][med.name] = true;
+        });
+        saveTodayData(data);
+
+        const period = MEDICINE_SCHEDULE.find(p => p.id === periodId);
+        showToast(`${period.label}时段已全部完成！`);
+
+        // 检查全天完成
+        let allPeriodsDone = true;
+        MEDICINE_SCHEDULE.forEach(p => {
+            if (!Object.values(data[p.id]).every(v => v)) allPeriodsDone = false;
+        });
+        if (allPeriodsDone) {
+            setTimeout(() => showConfetti(), 300);
+        }
+
+        renderCards();
+        renderHistory();
+        renderStats();
+    }
+
+    function undoAll(periodId) {
+        const data = getTodayData();
+        MEDICINE_SCHEDULE.find(p => p.id === periodId).medicines.forEach(med => {
+            data[periodId][med.name] = false;
+        });
+        saveTodayData(data);
+        showToast('已撤销全部');
+        renderCards();
+        renderStats();
+    }
+
+    function toggleHistory() {
+        const panel = document.getElementById('historyPanel');
+        const toggle = document.getElementById('historyToggle');
+        panel.classList.toggle('open');
+        toggle.classList.toggle('open');
+        toggle.querySelector('span').textContent = panel.classList.contains('open') ? '收起历史记录' : '查看历史记录';
+    }
+
+    // ============================================
+    // 初始化
+    // ============================================
+    function init() {
+        try {
+            cleanOldHistory();
+            initTodayData();
+            renderHeader();
+            renderStats();
+            renderCards();
+            renderHistory();
+
+            // 每分钟更新时间
+            setInterval(function() {
+                try {
+                    renderHeader();
+                    renderStats();
+                } catch(e) { console.error('定时更新出错:', e); }
+            }, 30000);
+
+            // 每天检查是否需要重置（跨天自动刷新）
+            var lastDate = getTodayKey();
+            setInterval(function() {
+                try {
+                    var currentDate = getTodayKey();
+                    if (currentDate !== lastDate) {
+                        lastDate = currentDate;
+                        initTodayData();
+                        renderHeader();
+                        renderStats();
+                        renderCards();
+                        renderHistory();
+                    }
+                } catch(e) { console.error('跨天检查出错:', e); }
+            }, 1000);
+        } catch(e) {
+            console.error('初始化出错:', e);
+            // 即使出错也要渲染基本信息
+            try {
+                renderHeader();
+                renderCards();
+            } catch(e2) {
+                // 最终兜底：直接写静态内容
+                document.getElementById('mainContent').innerHTML = '<p style="padding:20px;color:red;">加载出错，请尝试在 Safari 中直接打开此文件（非响应式模式）</p>';
+            }
+        }
+    }
+
+    // 页面加载后初始化（多重保障，兼容 Safari 响应式模式）
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    // 备用1：300ms 后再次尝试
+    setTimeout(function() {
+        var mc = document.getElementById('mainContent');
+        if (mc && mc.children.length === 0) {
+            init();
+        }
+    }, 300);
+    // 备用2：1s 后再尝试
+    setTimeout(function() {
+        var mc = document.getElementById('mainContent');
+        if (mc && mc.children.length === 0) {
+            init();
+        }
+    }, 1000);
+    </script>
+</body>
+</html>
